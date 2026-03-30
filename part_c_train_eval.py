@@ -3,14 +3,10 @@ import os, gymnasium as gym, numpy as np, matplotlib.pyplot as plt, torch
 from gymnasium.wrappers import RecordVideo
 from part_b_agent import DQNAgent
 
-os.makedirs('part_c_plots', exist_ok=True)
-os.makedirs('part_c_checkpoints', exist_ok=True)
-os.makedirs('part_c_videos/trained', exist_ok=True)
-
  # 訓練 DQN Agent，並在訓練過程中記錄獎勵、損失、ε 衰減和 Q 值變化
 def train(n_episodes=600):
     env = gym.make('LunarLander-v3', render_mode='rgb_array')
-    env = RecordVideo(env, 'part_c_videos/train/',
+    env = RecordVideo(env, 'outputs/part_c/videos/training',
                       episode_trigger=lambda x: x % 50 == 0)
 
     agent = DQNAgent()
@@ -53,19 +49,36 @@ def train(n_episodes=600):
         print(f"Ep {ep+1:4d} | R={total_reward:7.2f} | Avg100={avg100:7.2f} | ε={agent.epsilon:.3f}")
 
         if (ep + 1) % 50 == 0:
-            agent.save(f'part_c_checkpoints/model_ep{ep+1}.pth')
+            agent.save(f'outputs/part_c/checkpoints/model_ep{ep+1}.pth')
 
+        solved_at = None  # 預設沒解決
         if avg100 >= 200 and ep >= 99:
-            print(f"\n✅ 已解決！第 {ep+1} 回合達標")
+            solved_at = ep + 1
+            print(f"\n已解決：episode {solved_at}")
             break
 
     env.close()
-    agent.save('part_c_checkpoints/model_final.pth')
-    plot_training(rewards_log, loss_log, eps_log, q_log)
-    return agent, rewards_log
+    agent.save('outputs/part_c/checkpoints/model_final.pth')
+
+    metrics = {
+        'episode_rewards': rewards_log,
+        'avg_losses': loss_log,
+        'epsilons': eps_log,
+        'mean_q_values': q_log,
+        'solved_at': solved_at
+    }
+
+    plot_training(metrics)
+
+    return agent, metrics
 
 # 繪製訓練過程中的獎勵、損失、ε 衰減和 Q 值變化
-def plot_training(rewards, losses, epsilons, q_vals):
+def plot_training(metrics):
+    rewards  = metrics['episode_rewards']
+    losses   = metrics['avg_losses']
+    epsilons = metrics['epsilons']
+    q_vals   = metrics['mean_q_values']
+
     def moving_avg(data, w=20):
         return [np.mean(data[max(0,i-w):i+1]) for i in range(len(data))]
 
@@ -86,14 +99,14 @@ def plot_training(rewards, losses, epsilons, q_vals):
     axes[1,1].set_title('Average Q-values')
 
     plt.tight_layout()
-    plt.savefig('part_c_plots/training_curves.png', dpi=150)
+    plt.savefig('outputs/part_c/plots/training_curves.png', dpi=150)
     plt.show()
 
  # 評估訓練好的模型，並統計結果
 def evaluate(agent, n_episodes=100, record=True):
     env = gym.make('LunarLander-v3', render_mode='rgb_array')
     if record:
-        env = RecordVideo(env, 'part_c_videos/trained/',
+        env = RecordVideo(env, 'outputs/part_c/videos/trained/',
                           episode_trigger=lambda x: x < 5)  # 前5回錄影
 
     agent.epsilon = 0.0   # 關閉探索
@@ -118,5 +131,11 @@ def evaluate(agent, n_episodes=100, record=True):
     return rewards
 
 if __name__ == '__main__':
+    os.makedirs('outputs/part_c', exist_ok=True)
+    os.makedirs('outputs/part_c/plots', exist_ok=True)
+    os.makedirs('outputs/part_c/checkpoints', exist_ok=True)
+    os.makedirs('outputs/part_c/videos', exist_ok=True)
+    os.makedirs('outputs/part_c/videos/training', exist_ok=True)
+    os.makedirs('outputs/part_c/videos/trained', exist_ok=True)
     agent, train_rewards = train(n_episodes=600)
     eval_rewards = evaluate(agent, n_episodes=100)

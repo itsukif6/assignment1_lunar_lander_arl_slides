@@ -8,7 +8,7 @@ def run_random_baseline(n_episodes=100, record=True):
     """執行隨機動作的基線實驗，並統計結果。"""
     if record: # 如果 record=True，則每20回合錄製一段影片
         env = gym.make('LunarLander-v3', render_mode='rgb_array')
-        env = RecordVideo(env, 'part_a_videos/',
+        env = RecordVideo(env, 'outputs/part_a/videos/',
                           episode_trigger=lambda x: x % 20 == 0)
     else: # 否則直接創建環境，不錄製影片
         env = gym.make('LunarLander-v3')
@@ -52,13 +52,24 @@ def run_random_baseline(n_episodes=100, record=True):
     plt.xlabel('Episode'); plt.ylabel('Steps')
     plt.title('Random Baseline - Episode Length')
     plt.tight_layout()
-    plt.savefig('part_a_plots/baseline_stats.png', dpi=150)
+    plt.savefig('outputs/part_a/plots/baseline_stats.png', dpi=150)
     plt.show()
 
-    return rewards
+    stats = {
+        'episode_rewards': rewards,
+        'episode_lengths': lengths,
+        'mean_reward': float(np.mean(rewards)),
+        'std_reward': float(np.std(rewards)),
+        'min_reward': float(np.min(rewards)),
+        'max_reward': float(np.max(rewards)),
+        'mean_length': float(np.mean(lengths)),
+        'success_rate': float(np.mean(np.array(rewards) >= 200))
+    }
+
+    return stats
 
 if __name__ == '__main__':
     import os
-    os.makedirs('part_a_videos', exist_ok=True)
-    os.makedirs('part_a_plots', exist_ok=True)
+    os.makedirs('outputs/part_a', exist_ok=True)
+    os.makedirs('outputs/part_a/videos', exist_ok=True)
     run_random_baseline()
